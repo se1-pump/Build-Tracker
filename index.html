@@ -309,7 +309,7 @@ const CHECKS = [
   "KPI Cards Loading","Print Functionality Tested","Download Functionality Tested"
 ];
 const CSV_HEADER = ['id','date','project','version','commit','features','notes',
-  ...CHECKS.map((_,i)=>`check_${i}`),'saveTime','savedAt'];
+  ...CHECKS.map((_,i)=>`check_${i}`),'savedAt'];
 
 let cfg = {};
 let builds = [];
@@ -340,8 +340,8 @@ function boot() {
 function showModal() { document.getElementById('setupModal').style.display = 'flex'; }
 function closeModal() { document.getElementById('setupModal').style.display = 'none'; }
 function openSettings() {
-  document.getElementById('cfgOwner').value  = cfg.owner  || '';
-  document.getElementById('cfgRepo').value   = cfg.repo   || '';
+  document.getElementById('cfgOwner').value  = cfg.owner  || 'se1-pump';
+  document.getElementById('cfgRepo').value   = cfg.repo   || 'Build-Tracker';
   document.getElementById('cfgFile').value   = cfg.file   || 'build_history.csv';
   document.getElementById('cfgBranch').value = cfg.branch || 'main';
   document.getElementById('cfgToken').value  = cfg.token  || '';
@@ -513,7 +513,6 @@ async function saveBuild() {
     commit:   document.getElementById('gitCommit').value.trim() || '—',
     features: document.getElementById('features').value.trim() || '—',
     notes:    document.getElementById('notes').value.trim() || '',
-    saveTime: now.toTimeString().slice(0, 8),
     savedAt:  toIST(now)
   };
   CHECKS.forEach((_,i) => build[`check_${i}`] = checkStates[i]);
@@ -655,7 +654,7 @@ function renderHistory() {
         <div class="build-meta">
           <span class="version-badge">${esc(b.project || '—')}</span>
           <span class="version-badge">${esc(b.version)}</span>
-          <span class="build-date">📅 ${fmtDate(b.date)} ${b.saveTime ? `⏰ ${b.saveTime}` : ''}</span>
+          <span class="build-date">📅 ${fmtDate(b.date)}</span>
           ${b.commit&&b.commit!=='—'?`<span class="commit-id">${esc(String(b.commit).substring(0,12))}</span>`:''}
         </div>
         <div class="health-indicator ${h.c}">${h.l}</div>
