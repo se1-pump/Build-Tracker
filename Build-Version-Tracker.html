@@ -122,6 +122,7 @@
   .history-controls { display:flex; align-items:center; gap:12px; margin-bottom:20px; flex-wrap:wrap; }
   .search-box { flex:1; min-width:200px; background:var(--surface); border:1px solid var(--border); border-radius:9px; padding:10px 14px; color:var(--text); font-family:var(--mono); font-size:12px; outline:none; transition:all 0.2s; }
   .search-box:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(0,229,255,0.08); }
+  @media(max-width:768px) { .history-controls > div:last-child { flex-basis:100%; justify-content:flex-start; margin-left:0 !important; } }
   .build-count { font-size:11px; color:var(--text2); padding:6px 12px; background:var(--surface2); border:1px solid var(--border); border-radius:20px; white-space:nowrap; }
   .build-list { display:flex; flex-direction:column; gap:14px; }
   .build-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden; transition:border-color 0.2s; }
@@ -282,7 +283,11 @@
     <div class="history-controls">
       <input class="search-box" type="text" id="searchBox" placeholder="Search version, commit, features…" oninput="renderHistory()">
       <div class="build-count" id="buildCount">0 builds</div>
-      <button class="btn btn-secondary" onclick="refreshHistory()" style="font-size:11px;padding:9px 16px">↻ Refresh</button>
+      <div style="display:flex;gap:8px;align-items:center;margin-left:auto;flex-wrap:wrap">
+        <button class="btn btn-secondary" onclick="downloadCSV()" style="font-size:11px;padding:9px 14px;gap:6px">⬇ CSV</button>
+        <button class="btn btn-secondary" onclick="downloadJSON()" style="font-size:11px;padding:9px 14px;gap:6px">⬇ JSON</button>
+        <button class="btn btn-secondary" onclick="refreshHistory()" style="font-size:11px;padding:9px 16px">↻ Refresh</button>
+      </div>
     </div>
     <div class="build-list" id="buildList"></div>
   </div>
@@ -329,8 +334,8 @@ function boot() {
 function showModal() { document.getElementById('setupModal').style.display = 'flex'; }
 function closeModal() { document.getElementById('setupModal').style.display = 'none'; }
 function openSettings() {
-  document.getElementById('cfgOwner').value  = cfg.owner  || '';
-  document.getElementById('cfgRepo').value   = cfg.repo   || '';
+  document.getElementById('cfgOwner').value  = cfg.owner  || 'se1-pump';
+  document.getElementById('cfgRepo').value   = cfg.repo   || 'Build-Tracker';
   document.getElementById('cfgFile').value   = cfg.file   || 'build_history.csv';
   document.getElementById('cfgBranch').value = cfg.branch || 'main';
   document.getElementById('cfgToken').value  = cfg.token  || '';
@@ -429,8 +434,8 @@ function parseCSV(text) {
     const vals = parseCSVLine(line);
     const obj = {};
     headers.forEach((h,i) => obj[h] = vals[i] ?? '');
-    // parse check fields to boolean
-    for (let i=0;i<10;i++) obj[`check_${i}`] = obj[`check_${i}`]==='TRUE';
+    // parse check fields to boolean (case-insensitive)
+    for (let i=0;i<10;i++) obj[`check_${i}`] = (obj[`check_${i}`]||'').toLowerCase() === 'true';
     return obj;
   }).sort((a,b) => (b.savedAt||'').localeCompare(a.savedAt||''));
 }
@@ -450,7 +455,12 @@ function parseCSVLine(line) {
 function toCSVLine(row) {
   return CSV_HEADER.map(h => {
     let v = row[h] ?? '';
-    v = String(v);
+    // For check fields, explicitly convert boolean to TRUE/FALSE (uppercase)
+    if (h.startsWith('check_')) {
+      v = v === true ? 'TRUE' : 'FALSE';
+    } else {
+      v = String(v);
+    }
     if (v.includes(',') || v.includes('"') || v.includes('\n')) v = `"${v.replace(/"/g,'""')}"`;
     return v;
   }).join(',');
@@ -458,6 +468,34 @@ function toCSVLine(row) {
 
 function buildsToCSV() {
   return [CSV_HEADER.join(','), ...builds.map(toCSVLine)].join('\n');
+}
+
+function downloadCSV() {
+  const csv = buildsToCSV();
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  link.setAttribute('href', url);
+  link.setAttribute('download', `build_history_${today()}.csv`);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  showToast('CSV downloaded');
+}
+
+function downloadJSON() {
+  const json = JSON.stringify(builds, null, 2);
+  const blob = new Blob([json], { type: 'application/json;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  link.setAttribute('href', url);
+  link.setAttribute('download', `build_history_${today()}.json`);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  showToast('JSON downloaded');
 }
 
 // ── Save build ────────────────────────────────────────
