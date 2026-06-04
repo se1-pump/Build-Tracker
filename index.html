@@ -181,11 +181,11 @@
 
     <div class="form-group" style="margin-bottom:14px">
       <label>GitHub Username</label>
-      <input type="text" id="cfgOwner" placeholder="your-username">
+      <input type="text" id="cfgOwner" placeholder="your-username" value="se1-pump">
     </div>
     <div class="form-group" style="margin-bottom:14px">
       <label>Repository Name</label>
-      <input type="text" id="cfgRepo" placeholder="my-repo  (must exist on GitHub)">
+      <input type="text" id="cfgRepo" placeholder="my-repo  (must exist on GitHub)" value="Build-Tracker">
     </div>
     <div class="form-group" style="margin-bottom:14px">
       <label>CSV filename (path in repo)</label>
@@ -344,7 +344,7 @@ function openSettings() {
   document.getElementById('cfgRepo').value   = cfg.repo   || 'Build-Tracker';
   document.getElementById('cfgFile').value   = cfg.file   || 'build_history.csv';
   document.getElementById('cfgBranch').value = cfg.branch || 'main';
-  document.getElementById('cfgToken').value  = cfg.token  || '';
+  document.getElementById('cfgToken').value  = cfg.token  || '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';
   showModal();
 }
 
