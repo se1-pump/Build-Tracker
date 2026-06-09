@@ -231,6 +231,7 @@
   <nav class="tab-nav">
     <button class="tab-btn active" onclick="switchTab('form')">＋ New Build</button>
     <button class="tab-btn" onclick="switchTab('history')">◈ History</button>
+    <button class="tab-btn" onclick="switchTab('checklist')">📋 Checklists</button>
   </nav>
 
   <!-- NEW BUILD -->
@@ -298,6 +299,71 @@
     </div>
     <div class="build-list" id="buildList"></div>
   </div>
+
+  <!-- CHECKLISTS -->
+  <div id="panel-checklist" class="panel">
+    <div class="card">
+      <div class="card-title"><span class="dot"></span> Checklist Information</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Project Name</label>
+          <input type="text" id="checklistProjectName" placeholder="e.g. Project XYZ">
+        </div>
+        <div class="form-group">
+          <label>Build Version</label>
+          <input type="text" id="checklistBuildVersion" placeholder="e.g. v2.4.1">
+        </div>
+        <div class="form-group">
+          <label>Developer Name</label>
+          <input type="text" id="checklistDeveloperName" placeholder="Your name">
+        </div>
+        <div class="form-group">
+          <label>Code Reviewer</label>
+          <input type="text" id="checklistCodeReviewer" placeholder="Reviewer name">
+        </div>
+        <div class="form-group">
+          <label>Deployment Date</label>
+          <input type="date" id="checklistDeploymentDate">
+        </div>
+        <div class="form-group">
+          <label>Environment</label>
+          <select id="checklistEnvironment">
+            <option value="UAT">UAT</option>
+            <option value="Production">Production</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div id="checklistSectionsContainer"></div>
+
+    <div class="card">
+      <div class="card-title"><span class="dot"></span> Checklist Progress</div>
+      <div class="checklist-progress">
+        <div class="progress-bar"><div class="progress-fill" id="checklistProgressFill" style="width:0%"></div></div>
+        <div class="progress-label" id="checklistProgressLabel">0 / 0</div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-primary" id="saveChecklistBtn" onclick="saveChecklist()">💾 Save Checklist</button>
+      <button class="btn btn-secondary" onclick="downloadChecklistWord()" style="gap:6px">⬇ Word (.docx)</button>
+      <button class="btn btn-secondary" onclick="clearChecklistForm()">↺ Clear</button>
+    </div>
+  </div>
+
+  <!-- CHECKLIST HISTORY -->
+  <div id="panel-checklist-history" class="panel">
+    <div class="history-controls">
+      <input class="search-box" type="text" id="checklistSearchBox" placeholder="Search project, version, developer…" oninput="renderChecklistHistory()">
+      <div class="build-count" id="checklistCount">0 checklists</div>
+      <div style="display:flex;gap:8px;align-items:center;margin-left:auto;flex-wrap:wrap">
+        <button class="btn btn-secondary" onclick="downloadChecklistCSV()" style="font-size:11px;padding:9px 14px;gap:6px">⬇ CSV</button>
+        <button class="btn btn-secondary" onclick="refreshChecklistHistory()" style="font-size:11px;padding:9px 16px">↻ Refresh</button>
+      </div>
+    </div>
+    <div class="build-list" id="checklistHistoryList"></div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -311,10 +377,687 @@ const CHECKS = [
 const CSV_HEADER = ['id','date','project','version','commit','features','notes',
   ...CHECKS.map((_,i)=>`check_${i}`),'savedAt'];
 
+// Checklist sections data
+const CHECKLIST_SECTIONS = [
+  {
+    name: "1. GENERAL CHECKS",
+    items: [
+      "Code compiles successfully without errors",
+      "No build warnings impacting functionality",
+      "Peer code review completed",
+      "Code reviewer name documented",
+      "Changes tested locally",
+      "Changes tested in Development/UAT environment",
+      "No debugging code, console logs, or test code left behind",
+      "Sensitive information removed from source code",
+      "Application version updated",
+      "Deployment package prepared successfully",
+      "Rollback plan available",
+      "Release notes prepared",
+      "Database changes reviewed (if applicable)",
+      "All required approvals received"
+    ]
+  },
+  {
+    name: "2. C# CONSOLE APPLICATION CHECKLIST",
+    items: [
+      "No compilation errors",
+      "Code review completed",
+      "Local execution tested successfully",
+      "All configuration files updated correctly",
+      "Connection strings verified",
+      "API endpoints verified",
+      "Required folders and paths exist on server",
+      "Log file generation verified",
+      "Error handling tested",
+      "Scheduled task configuration verified (if applicable)",
+      "Service account permissions verified",
+      "Output files generated correctly",
+      "Dependencies/DLLs included in publish folder",
+      "Publish build generated successfully",
+      "Console application tested using production-like data"
+    ]
+  },
+  {
+    name: "3. ASP.NET CORE WEB API CHECKLIST",
+    items: [
+      "No compilation errors",
+      "Code review completed",
+      "Local API testing completed",
+      "Swagger endpoints verified",
+      "All API endpoints tested",
+      "appsettings.Production.json updated correctly",
+      "Connection strings verified",
+      "Third-party API URLs verified",
+      "Authentication & Authorization tested",
+      "CORS configuration verified",
+      "Database migration scripts validated",
+      "Logging configuration verified",
+      "Publish folder generated successfully",
+      "IIS hosting settings verified",
+      "SSL certificate validated",
+      "Health-check endpoint tested",
+      "API response validation completed",
+      "Backup taken before deployment"
+    ]
+  },
+  {
+    name: "4. REACT APPLICATION CHECKLIST",
+    items: [
+      "No compilation/build errors",
+      "Code review completed",
+      "Local testing completed",
+      "Production build generated successfully",
+      "version.txt updated correctly",
+      ".env file verified",
+      "API base URLs verified",
+      "Environment variables verified",
+      "New images/icons/assets added to build",
+      "Broken image links checked",
+      "Browser console shows no errors",
+      "Browser console shows no critical warnings",
+      "Application works in Chrome",
+      "Application works in Edge",
+      "Authentication/Login tested",
+      "Role-based access tested",
+      "All navigation menus tested",
+      "All forms tested",
+      "File upload/download tested (if applicable)",
+      "Build folder generated successfully",
+      "Cache/version refresh mechanism verified",
+      "Responsive UI verified",
+      "No hardcoded URLs present",
+      "Production API connectivity verified"
+    ]
+  },
+  {
+    name: "5. DATABASE CHECKLIST",
+    items: [
+      "Database backup taken",
+      "Database scripts reviewed",
+      "Scripts tested in UAT",
+      "Stored procedures validated",
+      "New tables verified",
+      "Index changes reviewed",
+      "Rollback script prepared",
+      "Data migration verified",
+      "Permissions validated",
+      "Production execution plan approved"
+    ]
+  },
+  {
+    name: "6. SERVER HOSTING CHECKLIST",
+    items: [
+      "Server access available",
+      "Server backup taken",
+      "Previous application backup taken",
+      "IIS Application Pool verified",
+      "Application Pool .NET version verified",
+      "Application Pool identity verified",
+      "Required folders exist",
+      "Folder permissions verified",
+      "SSL certificate valid",
+      "Disk space sufficient",
+      "Logs directory available",
+      "Firewall rules verified",
+      "Scheduled jobs/services verified",
+      "Required ports open",
+      "Configuration files updated",
+      "Monitoring enabled",
+      "Application starts successfully after deployment",
+      "Smoke testing completed",
+      "Error logs checked after deployment",
+      "Rollback package available"
+    ]
+  },
+  {
+    name: "7. POST DEPLOYMENT VALIDATION",
+    items: [
+      "Application accessible from production URL",
+      "Login functionality working",
+      "Critical business flows tested",
+      "Database connectivity verified",
+      "API connectivity verified",
+      "File upload/download verified",
+      "Email notifications working",
+      "Scheduled jobs running",
+      "No errors in logs",
+      "User acceptance confirmation received"
+    ]
+  }
+];
+
 let cfg = {};
 let builds = [];
 let fileSHA = null;
 let checkStates = {};
+
+// Checklist-specific variables
+let checklistHistory = [];
+let checklistFileSHA = null;
+let checklistStates = {};
+const CHECKLIST_CSV_FILE = 'checklist_history.csv';
+
+// Generate CSV header for checklists dynamically
+function generateChecklistCSVHeader() {
+  let allItems = [];
+  CHECKLIST_SECTIONS.forEach(section => {
+    allItems = allItems.concat(section.items);
+  });
+  const itemColumns = allItems.map((_, i) => `item_${i}`);
+  return ['id', 'date', 'projectName', 'buildVersion', 'developerName', 'deploymentDate', 'environment', 'codeReviewer', ...itemColumns, 'savedAt'];
+}
+
+const CHECKLIST_CSV_HEADER = generateChecklistCSVHeader();
+
+// ── Load Checklist CSV from GitHub ────────────────────
+async function loadChecklistCSV() {
+  try {
+    const r = await ghFetch(
+      `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${CHECKLIST_CSV_FILE}?ref=${cfg.branch}`,
+      cfg.token
+    );
+    if (r.status === 404) {
+      checklistHistory = []; checklistFileSHA = null;
+      return;
+    }
+    if (!r.ok) throw new Error('Failed to load checklist CSV');
+    const data = await r.json();
+    checklistFileSHA = data.sha;
+    const text = atob(data.content.replace(/\n/g, ''));
+    checklistHistory = parseChecklistCSV(text);
+  } catch(e) {
+    console.error('Could not load checklist CSV:', e);
+  }
+}
+
+function parseChecklistCSV(text) {
+  const lines = text.trim().split('\n').filter(Boolean);
+  if (lines.length < 2) return [];
+  const headers = parseCSVLine(lines[0]);
+  return lines.slice(1).map(line => {
+    const vals = parseCSVLine(line);
+    const obj = {};
+    headers.forEach((h, i) => obj[h] = vals[i] ?? '');
+    // Parse item states to boolean
+    for (let i = 0; i < 200; i++) {
+      const v = obj[`item_${i}`] ?? '';
+      obj[`item_${i}`] = v === true || String(v).toUpperCase() === 'TRUE';
+    }
+    return obj;
+  }).sort((a, b) => (b.savedAt || '').localeCompare(a.savedAt || ''));
+}
+
+function checklistToCSVLine(row) {
+  return CHECKLIST_CSV_HEADER.map(h => {
+    let v;
+    if (h.startsWith('item_')) {
+      v = row[h] === true ? 'TRUE' : 'FALSE';
+    } else {
+      v = String(row[h] ?? '');
+    }
+    if (v.includes(',') || v.includes('"') || v.includes('\n')) v = `"${v.replace(/"/g, '""')}"`;
+    return v;
+  }).join(',');
+}
+
+function checklistsToCSV() {
+  return [CHECKLIST_CSV_HEADER.join(','), ...checklistHistory.map(checklistToCSVLine)].join('\n');
+}
+
+// ── Render Checklist Sections ──────────────────────────
+function renderChecklistSections() {
+  const container = document.getElementById('checklistSectionsContainer');
+  let totalItems = 0;
+  
+  container.innerHTML = CHECKLIST_SECTIONS.map((section, sectionIdx) => {
+    const sectionStart = totalItems;
+    totalItems += section.items.length;
+    const sectionEnd = totalItems;
+
+    return `
+      <div class="card">
+        <div class="card-title"><span class="dot"></span> ${section.name}</div>
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:12px;">
+            <thead>
+              <tr style="background:var(--bg);border-bottom:1px solid var(--border);">
+                <th style="padding:10px;text-align:left;border-right:1px solid var(--border);width:50px;">#</th>
+                <th style="padding:10px;text-align:left;border-right:1px solid var(--border);">Checklist Item</th>
+                <th style="padding:10px;text-align:center;width:80px;">Yes/No</th>
+                <th style="padding:10px;text-align:left;width:150px;">Remarks</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${section.items.map((item, itemIdx) => {
+                const globalIdx = sectionStart + itemIdx;
+                const isChecked = checklistStates[globalIdx] || false;
+                return `
+                  <tr style="border-bottom:1px solid var(--border);">
+                    <td style="padding:10px;text-align:center;border-right:1px solid var(--border);background:var(--bg);">${itemIdx + 1}</td>
+                    <td style="padding:10px;border-right:1px solid var(--border);">${item}</td>
+                    <td style="padding:10px;text-align:center;border-right:1px solid var(--border);">
+                      <input type="checkbox" ${isChecked ? 'checked' : ''} 
+                             onchange="toggleChecklistItem(${globalIdx})" 
+                             style="cursor:pointer;width:18px;height:18px;">
+                    </td>
+                    <td style="padding:10px;">
+                      <input type="text" id="remark_${globalIdx}" placeholder="—" 
+                             style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:4px;padding:6px;color:var(--text);font-family:var(--mono);font-size:11px;">
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Initialize state if needed
+  if (Object.keys(checklistStates).length === 0) {
+    let itemCount = 0;
+    CHECKLIST_SECTIONS.forEach(section => {
+      section.items.forEach(() => {
+        checklistStates[itemCount] = false;
+        itemCount++;
+      });
+    });
+  }
+  updateChecklistProgress();
+}
+
+function toggleChecklistItem(idx) {
+  checklistStates[idx] = !checklistStates[idx];
+  updateChecklistProgress();
+}
+
+function updateChecklistProgress() {
+  const done = Object.values(checklistStates).filter(Boolean).length;
+  const total = Object.keys(checklistStates).length;
+  document.getElementById('checklistProgressFill').style.width = (total > 0 ? done / total * 100 : 0) + '%';
+  document.getElementById('checklistProgressLabel').textContent = `${done} / ${total}`;
+}
+
+// ── Save Checklist ─────────────────────────────────────
+async function saveChecklist() {
+  const projectName = document.getElementById('checklistProjectName').value.trim();
+  const buildVersion = document.getElementById('checklistBuildVersion').value.trim();
+  const developerName = document.getElementById('checklistDeveloperName').value.trim();
+  
+  if (!projectName || !buildVersion || !developerName) {
+    showToast('Project Name, Build Version, and Developer Name are required.', true);
+    return;
+  }
+  if (!cfg.token) {
+    showToast('Not connected to GitHub.', true);
+    return;
+  }
+
+  const now = new Date();
+  const checklist = {
+    id: Date.now().toString(),
+    date: today(),
+    projectName,
+    buildVersion,
+    developerName,
+    deploymentDate: document.getElementById('checklistDeploymentDate').value,
+    environment: document.getElementById('checklistEnvironment').value,
+    codeReviewer: document.getElementById('checklistCodeReviewer').value.trim(),
+    savedAt: toIST(now)
+  };
+
+  // Add all item states
+  let itemIdx = 0;
+  CHECKLIST_SECTIONS.forEach(section => {
+    section.items.forEach(() => {
+      checklist[`item_${itemIdx}`] = checklistStates[itemIdx] || false;
+      itemIdx++;
+    });
+  });
+
+  const btn = document.getElementById('saveChecklistBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Saving…';
+  setStatus('syncing', 'SAVING…');
+
+  checklistHistory.unshift(checklist);
+  const content = btoa(unescape(encodeURIComponent(checklistsToCSV())));
+
+  try {
+    const body = { message: `chore: add checklist for ${projectName} [${checklist.date}]`, content, branch: cfg.branch };
+    if (checklistFileSHA) body.sha = checklistFileSHA;
+
+    const r = await ghFetch(
+      `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${CHECKLIST_CSV_FILE}`,
+      cfg.token,
+      { method: 'PUT', body: JSON.stringify(body) }
+    );
+    if (!r.ok) {
+      const d = await r.json();
+      throw new Error(d.message || 'GitHub write failed');
+    }
+    const data = await r.json();
+    checklistFileSHA = data.content.sha;
+    setStatus('synced', 'SYNCED');
+    showToast(`✓ Checklist for ${projectName} saved to GitHub`);
+    clearChecklistForm();
+  } catch (e) {
+    checklistHistory.shift();
+    setStatus('offline', 'SAVE FAILED');
+    showToast(e.message || 'Save failed.', true);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '💾 Save Checklist';
+  }
+}
+
+// ── Clear Checklist Form ───────────────────────────────
+function clearChecklistForm() {
+  document.getElementById('checklistProjectName').value = '';
+  document.getElementById('checklistBuildVersion').value = '';
+  document.getElementById('checklistDeveloperName').value = '';
+  document.getElementById('checklistCodeReviewer').value = '';
+  document.getElementById('checklistDeploymentDate').value = today();
+  document.getElementById('checklistEnvironment').value = 'UAT';
+  
+  let itemIdx = 0;
+  CHECKLIST_SECTIONS.forEach(section => {
+    section.items.forEach(() => {
+      checklistStates[itemIdx] = false;
+      const remarkEl = document.getElementById(`remark_${itemIdx}`);
+      if (remarkEl) remarkEl.value = '';
+      itemIdx++;
+    });
+  });
+  renderChecklistSections();
+}
+
+// ── Download Checklist as Word ─────────────────────────
+async function downloadChecklistWord() {
+  const projectName = document.getElementById('checklistProjectName').value.trim();
+  const buildVersion = document.getElementById('checklistBuildVersion').value.trim();
+  const developerName = document.getElementById('checklistDeveloperName').value.trim();
+  
+  if (!projectName || !buildVersion || !developerName) {
+    showToast('Project Name, Build Version, and Developer Name are required.', true);
+    return;
+  }
+
+  try {
+    // Load docx library
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/docx@8.12.0/build/index.js';
+    script.onload = () => {
+      const { Document, Packer, Table, TableRow, TableCell, Paragraph, UnderlineType, TextRun, BorderStyle, WidthType, VerticalAlign, AlignmentType } = window.docx;
+
+      let rows = [];
+      let itemIdx = 0;
+      const remarks = {};
+      CHECKLIST_SECTIONS.forEach(section => {
+        section.items.forEach(() => {
+          const remarkEl = document.getElementById(`remark_${itemIdx}`);
+          remarks[itemIdx] = remarkEl ? remarkEl.value : '';
+          itemIdx++;
+        });
+      });
+
+      // Header section
+      rows.push(
+        new TableRow({
+          cells: [
+            new TableCell({
+              columnSpan: 4,
+              children: [new Paragraph({ text: 'APPLICATION GO-LIVE CHECKLIST', bold: true, size: 28 })],
+              shading: { fill: 'E8E8E8' }
+            })
+          ]
+        }),
+        new TableRow({
+          cells: [
+            new TableCell({ children: [new Paragraph({ text: 'Project Name:', bold: true })] }),
+            new TableCell({ children: [new Paragraph({ text: projectName })] }),
+            new TableCell({ children: [new Paragraph({ text: 'Build Version:', bold: true })] }),
+            new TableCell({ children: [new Paragraph({ text: buildVersion })] })
+          ]
+        }),
+        new TableRow({
+          cells: [
+            new TableCell({ children: [new Paragraph({ text: 'Developer Name:', bold: true })] }),
+            new TableCell({ children: [new Paragraph({ text: developerName })] }),
+            new TableCell({ children: [new Paragraph({ text: 'Code Reviewer:', bold: true })] }),
+            new TableCell({ children: [new Paragraph({ text: document.getElementById('checklistCodeReviewer').value.trim() })] })
+          ]
+        }),
+        new TableRow({
+          cells: [
+            new TableCell({ children: [new Paragraph({ text: 'Deployment Date:', bold: true })] }),
+            new TableCell({ children: [new Paragraph({ text: document.getElementById('checklistDeploymentDate').value })] }),
+            new TableCell({ children: [new Paragraph({ text: 'Environment:', bold: true })] }),
+            new TableCell({ children: [new Paragraph({ text: document.getElementById('checklistEnvironment').value })] })
+          ]
+        })
+      );
+
+      // Checklist items
+      itemIdx = 0;
+      CHECKLIST_SECTIONS.forEach(section => {
+        rows.push(
+          new TableRow({
+            cells: [
+              new TableCell({
+                columnSpan: 4,
+                children: [new Paragraph({ text: section.name, bold: true, size: 22 })],
+                shading: { fill: 'D3D3D3' }
+              })
+            ]
+          })
+        );
+
+        section.items.forEach((item, i) => {
+          const isChecked = checklistStates[itemIdx] || false;
+          rows.push(
+            new TableRow({
+              cells: [
+                new TableCell({ width: { size: 10, type: WidthType.PERCENT }, children: [new Paragraph({ text: String(i + 1), alignment: AlignmentType.CENTER })] }),
+                new TableCell({ width: { size: 50, type: WidthType.PERCENT }, children: [new Paragraph({ text: item })] }),
+                new TableCell({ width: { size: 15, type: WidthType.PERCENT }, children: [new Paragraph({ text: isChecked ? '☑' : '☐', alignment: AlignmentType.CENTER })] }),
+                new TableCell({ width: { size: 25, type: WidthType.PERCENT }, children: [new Paragraph({ text: remarks[itemIdx] || '—' })] })
+              ]
+            })
+          );
+          itemIdx++;
+        });
+      });
+
+      // Approval section
+      rows.push(
+        new TableRow({
+          cells: [
+            new TableCell({
+              columnSpan: 4,
+              children: [new Paragraph({ text: '' })]
+            })
+          ]
+        }),
+        new TableRow({
+          cells: [
+            new TableCell({
+              columnSpan: 4,
+              children: [new Paragraph({ text: 'DEPLOYMENT APPROVAL', bold: true, size: 22 })],
+              shading: { fill: 'D3D3D3' }
+            })
+          ]
+        }),
+        new TableRow({
+          cells: [
+            new TableCell({ columnSpan: 2, children: [new Paragraph({ text: 'Developer Name: _______________', bold: true })] }),
+            new TableCell({ columnSpan: 2, children: [new Paragraph({ text: 'Date: _______________', bold: true })] })
+          ]
+        }),
+        new TableRow({
+          cells: [
+            new TableCell({ columnSpan: 2, children: [new Paragraph({ text: 'Reviewer Name: _______________', bold: true })] }),
+            new TableCell({ columnSpan: 2, children: [new Paragraph({ text: 'Date: _______________', bold: true })] })
+          ]
+        }),
+        new TableRow({
+          cells: [
+            new TableCell({ columnSpan: 2, children: [new Paragraph({ text: 'Approved By: _______________', bold: true })] }),
+            new TableCell({ columnSpan: 2, children: [new Paragraph({ text: 'Date: _______________', bold: true })] })
+          ]
+        })
+      );
+
+      const table = new Table({ rows });
+      const doc = new Document({ sections: [{ children: [table] }] });
+
+      Packer.toBlob(doc).then(blob => {
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `Checklist_${projectName}_${buildVersion}_${today()}.docx`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        showToast('✓ Checklist downloaded as Word file');
+      });
+    };
+    document.head.appendChild(script);
+  } catch (e) {
+    showToast('Failed to generate Word file.', true);
+  }
+}
+
+// ── Checklist History ──────────────────────────────────
+function renderChecklistHistory() {
+  const q = (document.getElementById('checklistSearchBox').value || '').toLowerCase();
+  const filtered = checklistHistory.filter(c =>
+    !q || (c.projectName || '').toLowerCase().includes(q) ||
+    (c.buildVersion || '').toLowerCase().includes(q) ||
+    (c.developerName || '').toLowerCase().includes(q) ||
+    (c.date || '').includes(q)
+  );
+  
+  document.getElementById('checklistCount').textContent = `${filtered.length} checklist${filtered.length !== 1 ? 's' : ''}`;
+  const container = document.getElementById('checklistHistoryList');
+  
+  if (!filtered.length) {
+    container.innerHTML = `<div class="empty-state">
+      <div class="icon">📋</div>
+      <h3>${checklistHistory.length === 0 ? 'No checklists yet' : 'No results found'}</h3>
+      <p>${checklistHistory.length === 0 ? 'Create and save your first checklist using the form above.' : 'Try a different search term.'}</p>
+    </div>`;
+    return;
+  }
+
+  container.innerHTML = filtered.map(c => {
+    let itemIdx = 0;
+    let passCount = 0;
+    CHECKLIST_SECTIONS.forEach(section => {
+      section.items.forEach(() => {
+        if (c[`item_${itemIdx}`] === true) passCount++;
+        itemIdx++;
+      });
+    });
+    const total = itemIdx;
+    const health = passCount === total ? { l: `✓ ${passCount}/${total} Pass`, c: 'pass' } : passCount >= (total * 0.7) ? { l: `⚠ ${passCount}/${total} Pass`, c: 'partial' } : { l: `✗ ${passCount}/${total} Pass`, c: 'fail' };
+
+    return `<div class="build-card" id="card-${c.id}">
+      <div class="build-header" onclick="toggleCard('${c.id}')">
+        <div class="build-meta">
+          <span class="version-badge">${esc(c.projectName || '—')}</span>
+          <span class="version-badge">${esc(c.buildVersion)}</span>
+          <span class="build-date">👤 ${esc(c.developerName)}</span>
+          <span class="build-date">📅 ${fmtDate(c.date)}</span>
+        </div>
+        <div class="health-indicator ${health.c}">${health.l}</div>
+        <button class="expand-btn">▾</button>
+      </div>
+      <div class="build-body">
+        <div style="font-size:11px;color:var(--text2);line-height:2;">
+          <strong>Environment:</strong> ${esc(c.environment)}<br>
+          <strong>Code Reviewer:</strong> ${esc(c.codeReviewer || '—')}<br>
+          <strong>Deployment Date:</strong> ${fmtDate(c.deploymentDate)}<br>
+        </div>
+        <div class="build-actions">
+          <button class="btn btn-secondary" onclick="loadChecklistForWord('${c.id}')" style="font-size:11px;padding:8px 14px">⬇ Word</button>
+          <button class="btn btn-danger" onclick="deleteChecklist('${c.id}')" style="font-size:11px;padding:8px 14px">✕ Delete</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function loadChecklistForWord(id) {
+  const c = checklistHistory.find(x => x.id === id);
+  if (!c) return;
+  document.getElementById('checklistProjectName').value = c.projectName;
+  document.getElementById('checklistBuildVersion').value = c.buildVersion;
+  document.getElementById('checklistDeveloperName').value = c.developerName;
+  document.getElementById('checklistCodeReviewer').value = c.codeReviewer;
+  document.getElementById('checklistDeploymentDate').value = c.deploymentDate;
+  document.getElementById('checklistEnvironment').value = c.environment;
+  
+  let itemIdx = 0;
+  CHECKLIST_SECTIONS.forEach(section => {
+    section.items.forEach(() => {
+      checklistStates[itemIdx] = c[`item_${itemIdx}`] === true;
+      itemIdx++;
+    });
+  });
+  renderChecklistSections();
+  downloadChecklistWord();
+}
+
+async function deleteChecklist(id) {
+  if (!confirm('Delete this checklist from GitHub?')) return;
+  const prev = [...checklistHistory];
+  checklistHistory = checklistHistory.filter(c => c.id !== id);
+  setStatus('syncing', 'SAVING…');
+
+  const content = btoa(unescape(encodeURIComponent(checklistsToCSV())));
+  try {
+    const body = { message: `chore: delete checklist ${id}`, content, branch: cfg.branch };
+    if (checklistFileSHA) body.sha = checklistFileSHA;
+    const r = await ghFetch(
+      `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${CHECKLIST_CSV_FILE}`,
+      cfg.token,
+      { method: 'PUT', body: JSON.stringify(body) }
+    );
+    if (!r.ok) throw new Error();
+    const data = await r.json();
+    checklistFileSHA = data.content.sha;
+    setStatus('synced', 'SYNCED');
+    renderChecklistHistory();
+    showToast('Checklist deleted.');
+  } catch (e) {
+    checklistHistory = prev;
+    setStatus('offline', 'DELETE FAILED');
+    showToast('Delete failed.', true);
+  }
+}
+
+function downloadChecklistCSV() {
+  if (!checklistHistory.length) {
+    showToast('No checklists to download.', true);
+    return;
+  }
+  const blob = new Blob([checklistsToCSV()], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `checklist_history_${today()}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  showToast('CSV downloaded');
+}
+
+async function refreshChecklistHistory() {
+  await loadChecklistCSV();
+  renderChecklistHistory();
+  showToast('Checklist history refreshed from GitHub.');
+}
 
 // ── Boot ──────────────────────────────────────────────
 function boot() {
@@ -323,6 +1066,11 @@ function boot() {
   document.getElementById('buildProject').value = 'Stage 123';
   renderChecklist();
 
+  // Initialize checklist form
+  document.getElementById('checklistDeploymentDate').value = today();
+  document.getElementById('checklistEnvironment').value = 'UAT';
+  renderChecklistSections();
+
   const saved = localStorage.getItem('buildtrack_cfg');
   if (saved) {
     try {
@@ -330,6 +1078,7 @@ function boot() {
       closeModal();
       applyConfig();
       loadCSV();
+      loadChecklistCSV();
     } catch(e) { showModal(); }
   } else {
     showModal();
@@ -598,10 +1347,12 @@ function loadBuild(id) {
 // ── Tabs ──────────────────────────────────────────────
 function switchTab(tab) {
   document.querySelectorAll('.tab-btn').forEach((b,i) =>
-    b.classList.toggle('active',(tab==='form'&&i===0)||(tab==='history'&&i===1)));
+    b.classList.toggle('active',(tab==='form'&&i===0)||(tab==='history'&&i===1)||(tab==='checklist'&&i===2)));
   document.getElementById('panel-form').classList.toggle('active',tab==='form');
   document.getElementById('panel-history').classList.toggle('active',tab==='history');
+  document.getElementById('panel-checklist').classList.toggle('active',tab==='checklist');
   if (tab==='history') { renderStats(); renderHistory(); }
+  if (tab==='checklist') { renderChecklistSections(); }
 }
 
 async function refreshHistory() {
