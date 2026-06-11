@@ -1,21 +1,50 @@
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Syne:wght@400;600;700;800&display=swap');
 
 :root {
-  --bg: #0a0c10;
-  --surface: #111318;
-  --surface2: #181c24;
-  --border: #1e2433;
-  --border2: #2a3248;
+  color-scheme: light;
+  --bg: #f4f7fb;
+  --surface: #ffffff;
+  --surface2: #eef3fb;
+  --border: #d7e1ee;
+  --border2: #bccbdf;
   --accent: #00e5ff;
   --accent2: #7c3aed;
   --accent3: #10b981;
   --warn: #f59e0b;
   --danger: #ef4444;
+  --text: #122033;
+  --text2: #3e546f;
+  --text3: #6d7f97;
+  --overlay: rgba(6, 19, 36, 0.45);
+  --grid-line: rgba(0, 229, 255, 0.08);
+  --hero-glow: rgba(0, 229, 255, 0.14);
+  --focus-ring: rgba(0, 229, 255, 0.15);
+  --focus-fill: rgba(0, 229, 255, 0.05);
+  --accent-soft: rgba(0, 229, 255, 0.12);
+  --calendar-icon-filter: invert(0.35);
+  --toast-shadow: 0 8px 32px rgba(15, 23, 42, 0.16);
+  --mono: 'JetBrains Mono', monospace;
+  --sans: 'Syne', sans-serif;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #0a0c10;
+  --surface: #111318;
+  --surface2: #181c24;
+  --border: #1e2433;
+  --border2: #2a3248;
   --text: #e2e8f0;
   --text2: #7c8ca0;
   --text3: #4a5568;
-  --mono: 'JetBrains Mono', monospace;
-  --sans: 'Syne', sans-serif;
+  --overlay: rgba(0, 0, 0, 0.85);
+  --grid-line: rgba(0, 229, 255, 0.03);
+  --hero-glow: rgba(0, 229, 255, 0.06);
+  --focus-ring: rgba(0, 229, 255, 0.08);
+  --focus-fill: rgba(0, 229, 255, 0.02);
+  --accent-soft: rgba(0, 229, 255, 0.08);
+  --calendar-icon-filter: invert(0.6);
+  --toast-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
 }
 
 * {
@@ -30,14 +59,15 @@ body {
   font-family: var(--mono);
   min-height: 100vh;
   overflow-x: hidden;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 body::before {
   content: '';
   position: fixed;
   inset: 0;
-  background-image: linear-gradient(rgba(0, 229, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 229, 255, 0.03) 1px, transparent 1px);
+  background-image: linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
   background-size: 40px 40px;
   pointer-events: none;
   z-index: 0;
@@ -51,7 +81,7 @@ body::after {
   transform: translateX(-50%);
   width: 700px;
   height: 400px;
-  background: radial-gradient(ellipse, rgba(0, 229, 255, 0.06) 0%, transparent 70%);
+  background: radial-gradient(ellipse, var(--hero-glow) 0%, transparent 70%);
   pointer-events: none;
   z-index: 0;
 }
@@ -73,11 +103,12 @@ body::after {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.85);
+  background: var(--overlay);
   z-index: 200;
   display: flex;
   align-items: center;
   justify-content: center;
+  -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
 }
 
@@ -455,8 +486,8 @@ select {
 input:focus,
 textarea:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(0, 229, 255, 0.08);
-  background: rgba(0, 229, 255, 0.02);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+  background: var(--focus-fill);
 }
 
 textarea {
@@ -465,7 +496,7 @@ textarea {
 }
 
 input[type='date']::-webkit-calendar-picker-indicator {
-  filter: invert(0.6);
+  filter: var(--calendar-icon-filter);
   cursor: pointer;
 }
 
@@ -516,6 +547,7 @@ input[type='date']::-webkit-calendar-picker-indicator {
   padding: 11px 14px;
   cursor: pointer;
   transition: all 0.18s;
+  -webkit-user-select: none;
   user-select: none;
 }
 
@@ -641,7 +673,7 @@ input[type='date']::-webkit-calendar-picker-indicator {
   padding: 14px 20px;
   font-size: 12px;
   color: var(--accent3);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--toast-shadow);
   z-index: 100;
   display: flex;
   align-items: center;
@@ -719,7 +751,7 @@ input[type='date']::-webkit-calendar-picker-indicator {
 
 .search-box:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(0, 229, 255, 0.08);
+  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 @media (max-width: 768px) {
@@ -937,8 +969,8 @@ input[type='date']::-webkit-calendar-picker-indicator {
   display: inline-block;
   width: 14px;
   height: 14px;
-  border: 2px solid rgba(0, 0, 0, 0.2);
-  border-top-color: #000;
+  border: 2px solid var(--focus-ring);
+  border-top-color: var(--text);
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
 }
